@@ -1,5 +1,3 @@
 {
-  "itemGroup.namethatvillage": "Example Mod Tab",
-  "block.namethatvillage.example_block": "Example Block",
-  "item.namethatvillage.example_item": "Example Item"
+  "block.namethatvillage.village_bell": "Village Bell"
 }

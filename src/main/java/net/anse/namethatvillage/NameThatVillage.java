@@ -1,89 +1,94 @@
 package net.anse.namethatvillage;
 
-import org.slf4j.Logger;
-
-import com.mojang.logging.LogUtils;
-
-import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
+import net.anse.namethatvillage.block.VillageBellBlock;
+import net.anse.namethatvillage.init.ModBlockEntities;
+import net.anse.namethatvillage.init.ModBlocks;
+import net.anse.namethatvillage.init.ModItems;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.network.chat.Component;
-import net.minecraft.world.food.FoodProperties;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.state.BlockBehaviour;
-import net.minecraft.world.level.material.MapColor;
-import net.neoforged.api.distmarker.Dist;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.ModContainer;
-import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.fml.config.ModConfig;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
-import net.neoforged.neoforge.event.server.ServerStartingEvent;
-import net.neoforged.neoforge.registries.DeferredBlock;
-import net.neoforged.neoforge.registries.DeferredHolder;
-import net.neoforged.neoforge.registries.DeferredItem;
-import net.neoforged.neoforge.registries.DeferredRegister;
+import net.neoforged.neoforge.event.level.BlockEvent;
+import net.neoforged.neoforge.registries.RegisterEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-// The value here should match an entry in the META-INF/neoforge.mods.toml file
-@Mod(NameThatVillage.MODID)
-public class NameThatVillage
-{
-    public static final String MODID = "namethatvillage";
-    private static final Logger LOGGER = LogUtils.getLogger();
+import java.util.Optional;
 
-    public NameThatVillage(IEventBus modEventBus, ModContainer modContainer)
-    {
-        // Register the commonSetup method for modloading
-        modEventBus.addListener(this::commonSetup);
+@Mod(NameThatVillage.MOD_ID)
+public class NameThatVillage {
+    public static final String MOD_ID = "namethatvillage";
+    private static final Logger LOGGER = LogManager.getLogger();
 
-        // Register ourselves for server and other game events we are interested in.
-        // Note that this is necessary if and only if we want *this* class (NameThatVillage) to respond directly to events.
-        // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
+    public NameThatVillage(IEventBus modEventBus) {  // Recibe el IEventBus directamente
+        LOGGER.info("Name That Village mod initialized!");
+
+        // Registrar componentes usando el bus de eventos del mod
+        ModBlocks.register(modEventBus);
+        ModItems.register(modEventBus);
+        ModBlockEntities.register(modEventBus);
+
+        modEventBus.addListener(this::onRegisterItems);
+
+        // Registrar el manejador de eventos del juego
         NeoForge.EVENT_BUS.register(this);
-
-        // Register the item to a creative tab
-        modEventBus.addListener(this::addCreative);
-
-        // Register our mod's ModConfigSpec so that FML can create and load the config file for us
-        modContainer.registerConfig(ModConfig.Type.COMMON, Config.SPEC);
     }
 
-    private void commonSetup(final FMLCommonSetupEvent event)
-    {
-
-    }
-
-    // Add the example block item to the building blocks tab
-    private void addCreative(BuildCreativeModeTabContentsEvent event)
-    {
-
-    }
-
-    // You can use SubscribeEvent and let the Event Bus discover methods to call
+    // Evento de colocación de bloque
     @SubscribeEvent
-    public void onServerStarting(ServerStartingEvent event)
-    {
+    public void onBlockPlaced(BlockEvent.EntityPlaceEvent event) {
+        BlockState state = event.getPlacedBlock();
+        Level level = (Level) event.getLevel();
+        BlockPos pos = event.getPos();
 
+        if (state.getBlock() instanceof VillageBellBlock && level instanceof ServerLevel serverLevel) {
+            LOGGER.info("Village Bell placed at {}, registering as POI", pos);
+
+            // Registrar como POI
+            var poiTypeLookup = serverLevel.registryAccess().lookupOrThrow(Registries.POINT_OF_INTEREST_TYPE);
+            ResourceKey<PoiType> meetingKey = ResourceKey.create(Registries.POINT_OF_INTEREST_TYPE,
+                    ResourceLocation.fromNamespaceAndPath("minecraft", "meeting"));
+
+            Optional<Holder.Reference<PoiType>> meetingPoiTypeHolder = poiTypeLookup.get(meetingKey);
+            meetingPoiTypeHolder.ifPresent(holder -> {
+                serverLevel.getPoiManager().add(pos, holder);
+                LOGGER.info("Successfully registered Village Bell as meeting POI at {}", pos);
+            });
+        }
     }
 
-    // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent
-    @EventBusSubscriber(modid = MODID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-    public static class ClientModEvents
-    {
-        @SubscribeEvent
-        public static void onClientSetup(FMLClientSetupEvent event)
-        {
+    // Evento de rotura de bloque
+    @SubscribeEvent
+    public void onBlockBroken(BlockEvent.BreakEvent event) {
+        BlockState state = event.getState();
+        Level level = (Level) event.getLevel();
+        BlockPos pos = event.getPos();
 
+        if (state.getBlock() instanceof VillageBellBlock && level instanceof ServerLevel serverLevel) {
+            LOGGER.info("Village Bell broken at {}, removing POI", pos);
+
+            // Eliminar el POI
+            serverLevel.getPoiManager().remove(pos);
+        }
+    }
+    //@SubscribeEvent
+    public void onRegisterItems(RegisterEvent event) {
+        if (event.getRegistryKey().equals(Registries.ITEM)) {
+            event.register(Registries.ITEM, helper -> {
+                helper.register(ResourceLocation.fromNamespaceAndPath(NameThatVillage.MOD_ID, "village_bell"),
+                        new BlockItem(ModBlocks.VILLAGE_BELL.get(), new Item.Properties()));
+            });
         }
     }
 }

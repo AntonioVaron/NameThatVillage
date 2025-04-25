@@ -1,0 +1,10 @@
+{
+  "parent": "minecraft:block/bell_inventory",
+  "textures": {
+    "post": "minecraft:block/dark_oak_planks",
+    "particle": "namethatvillage:block/village_bell_side",
+    "bottom": "namethatvillage:block/village_bell_bottom",
+    "side": "namethatvillage:block/village_bell_side",
+    "top": "namethatvillage:block/village_bell_top"
+  }
+}

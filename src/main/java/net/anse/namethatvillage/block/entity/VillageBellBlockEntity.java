@@ -32,6 +32,7 @@ public class VillageBellBlockEntity extends BlockEntity {
     private String villageName = "";
     private final List<UUID> villagerIds = new ArrayList<>();
     private int searchCooldown = 0;
+    public boolean shaking;
 
     public VillageBellBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.VILLAGE_BELL.get(), pos, state);

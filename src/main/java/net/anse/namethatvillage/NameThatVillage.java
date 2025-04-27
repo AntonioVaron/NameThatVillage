@@ -1,6 +1,7 @@
 package net.anse.namethatvillage;
 
 import net.anse.namethatvillage.block.VillageBellBlock;
+import net.anse.namethatvillage.block.entity.renderer.VillageBellBlockEntityRenderer;
 import net.anse.namethatvillage.init.ModBlockEntities;
 import net.anse.namethatvillage.init.ModBlocks;
 import net.anse.namethatvillage.init.ModItems;
@@ -17,10 +18,13 @@ import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -30,10 +34,12 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Optional;
 
+
 @Mod(NameThatVillage.MOD_ID)
 public class NameThatVillage {
     public static final String MOD_ID = "namethatvillage";
     private static final Logger LOGGER = LogManager.getLogger();
+
 
     public NameThatVillage(IEventBus modEventBus) {
         LOGGER.info("Name That Village mod initialized!");
@@ -102,4 +108,16 @@ public class NameThatVillage {
             serverLevel.getPoiManager().remove(pos);
         }
     }
+
+    @EventBusSubscriber(modid = MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+    public static class ClientModEvents
+    {
+        @SubscribeEvent
+        public static void registerBER(EntityRenderersEvent.RegisterRenderers event)
+        {
+            event.registerBlockEntityRenderer(
+                    ModBlockEntities.VILLAGE_BELL.get(), VillageBellBlockEntityRenderer::new);
+        }
+    }
+
 }

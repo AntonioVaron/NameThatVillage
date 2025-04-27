@@ -3,6 +3,7 @@
   "textures": {
     "particle": "namethatvillage:block/village_bell_bottom",
     "post": "minecraft:block/stone",
-    "bar": "minecraft:block/dark_oak_planks"
+    "bar": "minecraft:block/dark_oak_planks",
+    "texture": "namethatvillage:block/village_bell_bottom"
   }
 }

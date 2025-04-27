@@ -32,11 +32,12 @@ public class ModBlocks {
 
     public static final DeferredBlock<VillageBellBlock> VILLAGE_BELL = registerBlock("village_bell",
             props -> new VillageBellBlock(props
-                    .mapColor(MapColor.METAL)
+                    //.mapColor(MapColor.METAL)
                     .requiresCorrectToolForDrops()
                     .strength(5.0F)
                     .sound(SoundType.ANVIL)
-                    .noOcclusion()));
+                    //.noOcclusion()
+            ));
 
     private static <B extends Block> DeferredBlock<B> registerBlock(String name, Function<BlockBehaviour.Properties, B> block) {
         DeferredBlock<B> toReturn = BLOCKS.registerBlock(name, block);

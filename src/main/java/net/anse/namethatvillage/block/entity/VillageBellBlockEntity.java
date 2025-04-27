@@ -105,19 +105,6 @@ public class VillageBellBlockEntity extends BlockEntity {
         }
     }
 
-    /*
-    public void readCustomData(CompoundTag tag) {
-        this.villageName = tag.getString("VillageName");
-
-        villagerIds.clear();
-        ListTag villagerList = tag.getList("Villagers", Tag.TAG_STRING);
-        for (int i = 0; i < villagerList.size(); i++) {
-            try {
-                villagerIds.add(UUID.fromString(villagerList.getString(i)));
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
-    }*/
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries)
@@ -136,7 +123,7 @@ public class VillageBellBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {  // En 1.21.4 es mejor usar saveAdditional
+    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putString("VillageName", villageName);
 

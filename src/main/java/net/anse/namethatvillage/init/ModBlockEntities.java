@@ -18,7 +18,7 @@ public class ModBlockEntities {
             "village_bell",
             () -> new BlockEntityType<>(
                     VillageBellBlockEntity::new,
-                    ModBlocks.VILLAGE_BELL.get(), null)
+                    ModBlocks.VILLAGE_BELL.get())
             );
 
     public static void register(IEventBus eventBus) {

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/bell_wall",
+  "textures": {
+    "particle": "namethatvillage:block/village_bell_bottom",
+    "bar": "minecraft:block/dark_oak_planks"
+  }
+}

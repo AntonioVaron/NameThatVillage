@@ -35,7 +35,7 @@ public class NameThatVillage {
     public static final String MOD_ID = "namethatvillage";
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public NameThatVillage(IEventBus modEventBus) {  // Recibe el IEventBus directamente
+    public NameThatVillage(IEventBus modEventBus) {
         LOGGER.info("Name That Village mod initialized!");
 
         modEventBus.addListener(this::commonSetup);
@@ -48,7 +48,6 @@ public class NameThatVillage {
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus);
 
-        //modEventBus.addListener(this::onRegisterItems);
         modEventBus.addListener(this::addCreative);
 
     }
@@ -103,14 +102,4 @@ public class NameThatVillage {
             serverLevel.getPoiManager().remove(pos);
         }
     }
-    /*
-    //@SubscribeEvent
-    public void onRegisterItems(RegisterEvent event) {
-        if (event.getRegistryKey().equals(Registries.ITEM)) {
-            event.register(Registries.ITEM, helper -> {
-                helper.register(ResourceLocation.fromNamespaceAndPath(NameThatVillage.MOD_ID, "village_bell"),
-                        new BlockItem(ModBlocks.VILLAGE_BELL.get(), new Item.Properties()));
-            });
-        }
-    }*/
 }

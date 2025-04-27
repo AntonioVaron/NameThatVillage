@@ -1,3 +1,6 @@
 {
-  "parent": "namethatvillage:block/village_bell_inventory"
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "minecraft:item/bell"
+  }
 }

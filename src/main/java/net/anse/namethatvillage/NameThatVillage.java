@@ -12,13 +12,17 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.apache.logging.log4j.LogManager;
@@ -34,15 +38,32 @@ public class NameThatVillage {
     public NameThatVillage(IEventBus modEventBus) {  // Recibe el IEventBus directamente
         LOGGER.info("Name That Village mod initialized!");
 
+        modEventBus.addListener(this::commonSetup);
+
+        // Registrar el manejador de eventos del juego
+        NeoForge.EVENT_BUS.register(this);
+
         // Registrar componentes usando el bus de eventos del mod
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus);
 
         modEventBus.addListener(this::onRegisterItems);
+        modEventBus.addListener(this::addCreative);
 
-        // Registrar el manejador de eventos del juego
-        NeoForge.EVENT_BUS.register(this);
+    }
+
+    private void commonSetup(final FMLCommonSetupEvent event)
+    {
+
+    }
+
+    private void addCreative(BuildCreativeModeTabContentsEvent event)
+    {
+        if(event.getTabKey() == CreativeModeTabs.FUNCTIONAL_BLOCKS)
+        {
+            event.accept(ModBlocks.VILLAGE_BELL);
+        }
     }
 
     // Evento de colocación de bloque

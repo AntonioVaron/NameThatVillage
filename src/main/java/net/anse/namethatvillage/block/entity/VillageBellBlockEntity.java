@@ -16,10 +16,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,25 @@ public class VillageBellBlockEntity extends BlockEntity {
     public VillageBellBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.VILLAGE_BELL.get(), pos, state);
     }
+
+    public final ItemStackHandler Inventory = new ItemStackHandler(1)
+    {
+        @Override
+        protected int getStackLimit(int slot, ItemStack stack)
+        {
+            return 1;
+        }
+
+        @Override
+        protected void onContentsChanged(int slot)
+        {
+            setChanged();
+            if(!level.isClientSide())
+            {
+                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+            }
+        }
+    };
 
     public static void tick(Level level, BlockPos pos, BlockState state, VillageBellBlockEntity blockEntity) {
         if (level.isClientSide) return;
@@ -84,7 +105,24 @@ public class VillageBellBlockEntity extends BlockEntity {
         }
     }
 
+    /*
     public void readCustomData(CompoundTag tag) {
+        this.villageName = tag.getString("VillageName");
+
+        villagerIds.clear();
+        ListTag villagerList = tag.getList("Villagers", Tag.TAG_STRING);
+        for (int i = 0; i < villagerList.size(); i++) {
+            try {
+                villagerIds.add(UUID.fromString(villagerList.getString(i)));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+    }*/
+
+    @Override
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries)
+    {
+        super.loadAdditional(tag, registries);
         this.villageName = tag.getString("VillageName");
 
         villagerIds.clear();
@@ -97,8 +135,9 @@ public class VillageBellBlockEntity extends BlockEntity {
         }
     }
 
-    public void saveAdditional(CompoundTag tag) {  // En 1.21.4 es mejor usar saveAdditional
-        super.saveAdditional(tag, (HolderLookup.Provider) getBlockState());
+    @Override
+    public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {  // En 1.21.4 es mejor usar saveAdditional
+        super.saveAdditional(tag, registries);
         tag.putString("VillageName", villageName);
 
         // Guardar IDs de aldeanos

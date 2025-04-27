@@ -16,24 +16,12 @@ public class ModBlockEntities {
 
     public static final Supplier<BlockEntityType<VillageBellBlockEntity>> VILLAGE_BELL = BLOCK_ENTITIES.register(
             "village_bell",
-            () -> {
-                BlockEntityType.BlockEntitySupplier<VillageBellBlockEntity> supplier =
-                        (pos, state) -> new VillageBellBlockEntity(pos, state);
-
-                // Registramos con un conjunto vacío de bloques
-                return new BlockEntityType<>(supplier, Set.of(), false);
-            }
-    );
+            () -> new BlockEntityType<>(
+                    VillageBellBlockEntity::new,
+                    ModBlocks.VILLAGE_BELL.get(), null)
+            );
 
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
-
-        // Usar el evento específico para añadir bloques a un BlockEntityType
-        eventBus.addListener(ModBlockEntities::addBlocksToBlockEntities);
-    }
-
-    // Método para manejar el evento que agrega bloques a BlockEntityType
-    private static void addBlocksToBlockEntities(BlockEntityTypeAddBlocksEvent event) {
-        event.modify(VILLAGE_BELL.get(), ModBlocks.VILLAGE_BELL.get());
     }
 }

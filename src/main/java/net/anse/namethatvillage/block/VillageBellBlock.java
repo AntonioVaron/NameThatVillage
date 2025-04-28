@@ -148,6 +148,8 @@ public class VillageBellBlock extends BaseEntityBlock {
 
             villageBell.onRing();
             level.playSound(null, pos, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2.0F, 1.0F);
+
+            level.blockEvent(pos, this, 1, direction == null ? 0 : direction.get3DDataValue());
             level.gameEvent(entity, GameEvent.BLOCK_CHANGE, pos);
             return true;
         } else {

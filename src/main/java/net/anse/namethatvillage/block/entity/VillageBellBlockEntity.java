@@ -1,38 +1,43 @@
 package net.anse.namethatvillage.block.entity;
 
 import net.anse.namethatvillage.init.ModBlockEntities;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
-import net.minecraft.core.Registry;
+import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-public class VillageBellBlockEntity extends BlockEntity {
+public class VillageBellBlockEntity extends BlockEntity implements MenuProvider {
     private String villageName = "";
     private final List<UUID> villagerIds = new ArrayList<>();
     private int searchCooldown = 0;
-    public boolean shaking;
+    private boolean shaking;
+    private int shakeTime;
+    private int shakeDirection;
 
     public VillageBellBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.VILLAGE_BELL.get(), pos, state);
@@ -58,15 +63,26 @@ public class VillageBellBlockEntity extends BlockEntity {
     };
 
     public static void tick(Level level, BlockPos pos, BlockState state, VillageBellBlockEntity blockEntity) {
-        if (level.isClientSide) return;
+        if (level.isClientSide) {
 
         // Reducir el contador de cooldown
-        if (blockEntity.searchCooldown > 0) {
+        if (blockEntity.searchCooldown > 0)
             blockEntity.searchCooldown--;
+        }
+        if (blockEntity.shaking) {
+            ++blockEntity.shakeTime;
+            if (blockEntity.shakeTime >= 50) {
+                blockEntity.shaking = false;
+                blockEntity.shakeTime = 0;
+            }
         }
     }
 
     public void onRing() {
+
+        this.shaking = true;
+        this.shakeTime = 0;
+
         if (level instanceof ServerLevel serverLevel && searchCooldown <= 0) {
             searchCooldown = 200; // 10 segundos de cooldown
 
@@ -106,12 +122,38 @@ public class VillageBellBlockEntity extends BlockEntity {
         }
     }
 
+    @Override
+    public boolean triggerEvent(int id, int param) {
+        if (id == 1) {
+            this.shakeTime = 0;
+            this.shaking = true;
+            this.shakeDirection = param-2;
+            System.out.println("shakeDirection: " + this.shakeDirection);
+            return true;
+        }
+        return super.triggerEvent(id, param);
+    }
+
+    public Direction getClickDirection() {
+        if (shakeDirection == 0) {
+            return Direction.NORTH;  // Sacudida en la dirección norte
+        } else if (shakeDirection == 1) {
+            return Direction.SOUTH;  // Sacudida en la dirección sur
+        } else if (shakeDirection == 2) {
+            return Direction.WEST;   // Sacudida en la dirección oeste
+        } else if (shakeDirection == 3) {
+            return Direction.EAST;   // Sacudida en la dirección este
+        }
+        return Direction.NORTH;  // Valor por defecto
+    }
+
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries)
     {
         super.loadAdditional(tag, registries);
         this.villageName = tag.getString("VillageName");
+        this.shakeDirection = tag.getInt("ShakeDirection");
 
         villagerIds.clear();
         ListTag villagerList = tag.getList("Villagers", Tag.TAG_STRING);
@@ -127,6 +169,7 @@ public class VillageBellBlockEntity extends BlockEntity {
     public void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.putString("VillageName", villageName);
+        this.shakeDirection = tag.getInt("ShakeDirection");
 
         // Guardar IDs de aldeanos
         ListTag villagerList = new ListTag();
@@ -148,5 +191,26 @@ public class VillageBellBlockEntity extends BlockEntity {
 
     public List<UUID> getVillagerIds() {
         return villagerIds;
+    }
+    public int getShakeTime() {
+        return this.shakeTime;
+    }
+
+    public int getShakeDirection() {
+        return this.shakeDirection;
+    }
+
+    public boolean isShaking() {
+        return shaking;
+    }
+
+    @Override
+    public Component getDisplayName() {
+        return Component.literal("Village");
+    }
+
+    @Override
+    public @Nullable AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
+        return null;
     }
 }

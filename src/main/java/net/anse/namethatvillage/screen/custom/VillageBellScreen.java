@@ -13,7 +13,7 @@ import net.minecraft.client.renderer.GameRenderer;
 public class VillageBellScreen extends AbstractContainerScreen<VillageBellMenu>
 {
     private static final ResourceLocation GUI_TEXTURE =
-            ResourceLocation.fromNamespaceAndPath(NameThatVillage.MOD_ID, "textures/gui/villagebell/village.png");
+            ResourceLocation.fromNamespaceAndPath(NameThatVillage.MOD_ID, "textures/gui/village_bell/village.png");
 
     public VillageBellScreen(VillageBellMenu menu, Inventory playerInventory, Component title)
     {

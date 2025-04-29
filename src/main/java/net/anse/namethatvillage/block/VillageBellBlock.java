@@ -3,14 +3,18 @@ package net.anse.namethatvillage.block;
 import com.mojang.serialization.MapCodec;
 import net.anse.namethatvillage.block.entity.VillageBellBlockEntity;
 import net.anse.namethatvillage.init.ModBlockEntities;
+import net.anse.namethatvillage.screen.custom.VillageBellScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -94,6 +98,12 @@ public class VillageBellBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
+
+        if(level.getBlockEntity(pos) instanceof VillageBellBlockEntity villageBellBlockEntity) {
+            if (player.isCrouching() && !level.isClientSide()) {
+                ((ServerPlayer) player).openMenu(new SimpleMenuProvider(villageBellBlockEntity, Component.literal("Village")), pos);
+            }
+        }
         return this.onHit(level, state, hit, player, true) ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
 
@@ -101,6 +111,8 @@ public class VillageBellBlock extends BaseEntityBlock {
         Direction direction = result.getDirection();
         BlockPos blockpos = result.getBlockPos();
         boolean properHit = !canRingBell || this.isProperHit(state, direction, result.getLocation().y - (double)blockpos.getY());
+
+
 
         if (properHit) {
             boolean rang = this.attemptToRing(player, level, blockpos, direction);
@@ -142,6 +154,7 @@ public class VillageBellBlock extends BaseEntityBlock {
     public boolean attemptToRing(@Nullable Entity entity, Level level, BlockPos pos, @Nullable Direction direction) {
         BlockEntity blockEntity = level.getBlockEntity(pos);
         if (!level.isClientSide && blockEntity instanceof VillageBellBlockEntity villageBell) {
+
             if (direction == null) {
                 direction = level.getBlockState(pos).getValue(FACING);
             }

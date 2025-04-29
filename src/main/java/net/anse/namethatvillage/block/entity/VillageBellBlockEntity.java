@@ -1,6 +1,7 @@
 package net.anse.namethatvillage.block.entity;
 
 import net.anse.namethatvillage.init.ModBlockEntities;
+import net.anse.namethatvillage.screen.custom.VillageBellMenu;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -211,6 +212,6 @@ public class VillageBellBlockEntity extends BlockEntity implements MenuProvider 
 
     @Override
     public @Nullable AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return null;
+        return new VillageBellMenu(containerId, playerInventory, this);
     }
 }

@@ -5,6 +5,9 @@ import net.anse.namethatvillage.block.entity.renderer.VillageBellBlockEntityRend
 import net.anse.namethatvillage.init.ModBlockEntities;
 import net.anse.namethatvillage.init.ModBlocks;
 import net.anse.namethatvillage.init.ModItems;
+import net.anse.namethatvillage.screen.ModMenuTypes;
+import net.anse.namethatvillage.screen.custom.VillageBellMenu;
+import net.anse.namethatvillage.screen.custom.VillageBellScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -25,6 +28,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
@@ -117,6 +121,12 @@ public class NameThatVillage {
         {
             event.registerBlockEntityRenderer(
                     ModBlockEntities.VILLAGE_BELL.get(), VillageBellBlockEntityRenderer::new);
+        }
+
+        @SubscribeEvent
+        public static void registerScreens(RegisterMenuScreensEvent event)
+        {
+            event.register(ModMenuTypes.VILLAGE_BELL_MENU.get(), VillageBellScreen::new);
         }
     }
 

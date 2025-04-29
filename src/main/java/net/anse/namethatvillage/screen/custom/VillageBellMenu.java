@@ -30,8 +30,9 @@ public class VillageBellMenu extends AbstractContainerMenu
         this.blockEntity = ((VillageBellBlockEntity) blockEntity);
         this.level = inv.player.level();
 
-        addPlayerInventory(inv);
-        addPlayerHotbar(inv);
+        //addPlayerInventory(inv);
+        //addPlayerHotbar(inv);
+        this.addStandardInventorySlots(inv, 58, 84);
 
     }
 

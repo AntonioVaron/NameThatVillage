@@ -27,9 +27,18 @@ public class VillageBellScreen extends AbstractContainerScreen<VillageBellMenu>
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         //RenderSystem.setShaderTexture(0, GUI_TEXTURE);
 
-        int x = (width - imageWidth) / 2;
+        int x = (width - 276) / 2;
         int y = (height - imageHeight) / 2;
 
-        guiGraphics.blit(RenderType::text, GUI_TEXTURE, x, y, 0.0F, 0.0F, imageWidth, imageHeight, 256, 256);
+        guiGraphics.blit(RenderType::guiTextured, GUI_TEXTURE, x, y, 0.0F, 0.0F, 276, imageHeight, 276, 166);
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        // Título del menú
+        guiGraphics.drawString(this.font, this.title, 98, 26, 0x404040, false);
+
+        // Texto "Inventory" encima del inventario del jugador
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, 58, this.imageHeight - 94, 0x404040, false);
     }
 }

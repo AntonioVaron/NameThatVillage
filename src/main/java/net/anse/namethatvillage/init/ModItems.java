@@ -16,11 +16,6 @@ import java.util.function.Supplier;
 public class ModItems {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(NameThatVillage.MOD_ID);
 
-/*
-    public static final DeferredItem<BlockItem> VILLAGE_BELL_BLOCK_ITEM = ITEMS.registerSimpleBlockItem(
-            "village_bell", ModBlocks.VILLAGE_BELL
-    );*/
-
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }

@@ -1,7 +1,10 @@
 package net.anse.namethatvillage;
 
+import net.anse.namethatvillage.attachment.ModAttachments;
 import net.anse.namethatvillage.block.VillageBellBlock;
 import net.anse.namethatvillage.block.entity.renderer.VillageBellBlockEntityRenderer;
+import net.anse.namethatvillage.data.VillageBellChunkData;
+import net.anse.namethatvillage.event.WorldEvents;
 import net.anse.namethatvillage.init.ModBlockEntities;
 import net.anse.namethatvillage.init.ModBlocks;
 import net.anse.namethatvillage.init.ModItems;
@@ -35,6 +38,8 @@ import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.registries.RegisterEvent;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.attachment.AttachmentType.Builder;
 
 import java.util.Optional;
 
@@ -45,10 +50,12 @@ public class NameThatVillage {
     private static final Logger LOGGER = LogManager.getLogger();
 
 
+
     public NameThatVillage(IEventBus modEventBus) {
         LOGGER.info("Name That Village mod initialized!");
 
         modEventBus.addListener(this::commonSetup);
+        ModAttachments.ATTACHMENT_TYPES.register(modEventBus);
 
         // Registrar el manejador de eventos del juego
         NeoForge.EVENT_BUS.register(this);
@@ -57,6 +64,10 @@ public class NameThatVillage {
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
         ModBlockEntities.register(modEventBus);
+
+        ModMenuTypes.register(modEventBus);
+
+        NeoForge.EVENT_BUS.register((WorldEvents.class));
 
         modEventBus.addListener(this::addCreative);
 

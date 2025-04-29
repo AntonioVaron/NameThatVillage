@@ -101,7 +101,7 @@ public class VillageBellBlock extends BaseEntityBlock {
 
         if(level.getBlockEntity(pos) instanceof VillageBellBlockEntity villageBellBlockEntity) {
             if (player.isCrouching() && !level.isClientSide()) {
-                ((ServerPlayer) player).openMenu(new SimpleMenuProvider(villageBellBlockEntity, Component.literal("Village")), pos);
+                ((ServerPlayer) player).openMenu(new SimpleMenuProvider(villageBellBlockEntity, Component.literal("Village:")), pos);
             }
         }
         return this.onHit(level, state, hit, player, true) ? InteractionResult.SUCCESS : InteractionResult.PASS;

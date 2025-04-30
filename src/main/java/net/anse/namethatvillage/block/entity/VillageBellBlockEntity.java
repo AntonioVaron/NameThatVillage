@@ -1,5 +1,6 @@
 package net.anse.namethatvillage.block.entity;
 
+import net.anse.namethatvillage.VillageNameGenerator;
 import net.anse.namethatvillage.init.ModBlockEntities;
 import net.anse.namethatvillage.screen.custom.VillageBellMenu;
 import net.minecraft.core.*;
@@ -8,7 +9,11 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -21,24 +26,25 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.items.ItemStackHandler;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public class VillageBellBlockEntity extends BlockEntity implements MenuProvider {
-    private String villageName = "";
+    private String villageName = "Default";
     private final List<UUID> villagerIds = new ArrayList<>();
     private int searchCooldown = 0;
     private boolean shaking;
     private int shakeTime;
     private int shakeDirection;
+    private static final Logger LOGGER = LogManager.getLogger();
 
     public VillageBellBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.VILLAGE_BELL.get(), pos, state);
@@ -164,6 +170,39 @@ public class VillageBellBlockEntity extends BlockEntity implements MenuProvider 
             } catch (IllegalArgumentException ignored) {
             }
         }
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+
+        // Solo si aún no tiene nombre
+        if (villageName.equals("Default") && this.level != null && !this.level.isClientSide) {
+            Biome biome = this.level.getBiome(this.worldPosition).value();
+            ResourceLocation biomeKey = this.level.registryAccess()
+                    .lookupOrThrow(Registries.BIOME)
+                    .getKey(biome);
+
+            if (biomeKey != null) {
+                String biomePath = biomeKey.getPath(); // por ejemplo "plains", "desert", etc.
+                this.villageName = VillageNameGenerator.generateVillageName(biomePath);
+                LOGGER.info("Asignado nombre '{}' a campana en {}", villageName, this.worldPosition);
+
+                this.setChanged();
+                this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
+            }
+        }
+    }
+
+    @Override
+    @Nullable
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
     }
 
     @Override

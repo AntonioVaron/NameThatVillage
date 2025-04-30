@@ -4,14 +4,27 @@ import net.anse.namethatvillage.NameThatVillage;
 import net.anse.namethatvillage.attachment.ModAttachments;
 import net.anse.namethatvillage.data.VillageBellChunkData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.neoforged.neoforge.event.level.ChunkDataEvent;
 import net.neoforged.neoforge.event.level.ChunkEvent;
+import net.minecraft.server.level.ServerLevel;
+
+import java.util.*;
 
 
 import net.anse.namethatvillage.init.ModBlocks;
@@ -27,64 +40,93 @@ public class WorldEvents {
 
     @SubscribeEvent
     public static void onChunkLoad(ChunkEvent.Load event) {
-        LOGGER.info("Chunk loaded: {}", event.getChunk().getPos());
 
         Level level = (Level) event.getLevel();
         LevelChunk chunk = (LevelChunk) event.getChunk();
         VillageBellChunkData data = chunk.getData(ModAttachments.VILLAGE_BELL_CHUNK);
 
         if (data.isReplaced()) return;
-
         if (level.isClientSide()) return;
 
+        // Cast para acceder a estructuras
+        if (!(level instanceof ServerLevel serverLevel)) return;
 
-        // Revisamos todas las posiciones del chunk
-        chunk = (LevelChunk) event.getChunk();
-        BlockPos chunkOrigin = chunk.getPos().getWorldPosition();
+        Registry<Structure> structureRegistry = serverLevel.registryAccess().lookupOrThrow(Registries.STRUCTURE);
+        StructureManager structureManager = serverLevel.structureManager();
 
+        boolean isVillageChunk = chunk.getAllStarts().entrySet().stream()
+                .anyMatch(entry -> {
+                    StructureStart start = entry.getValue();
+                    ResourceLocation key = structureRegistry.getKey(entry.getKey());
+                    return key != null
+                            && key.getPath().contains("village")
+                            && start != StructureStart.INVALID_START;
+                });
 
-        int chunkX = chunkOrigin.getX();
-        int chunkZ = chunkOrigin.getZ();
+        if (!isVillageChunk) {
+            LOGGER.debug("Chunk {} no contiene StructureStart de aldea, omitiendo procesamiento.", chunk.getPos());
+            return;
+        }
 
-        LOGGER.info("Scanning chunk from ({}, {})", chunkX, chunkZ);
+        LOGGER.info("Chunk {} contiene StructureStart de aldea, procesando área 3x3...", chunk.getPos());
 
         boolean foundBell = false;
 
-        for (int x = chunkX; x < chunkX + 16; x++) {
-            for (int z = chunkZ; z < chunkZ + 16; z++) {
-                for (int y = level.getMinY(); y < level.getMaxY(); y++) {
-                    BlockPos pos = new BlockPos(x, y, z);
-                    BlockState state = level.getBlockState(pos);
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                ChunkPos nearbyPos = new ChunkPos(chunk.getPos().x + dx, chunk.getPos().z + dz);
+                LevelChunk nearbyChunk = serverLevel.getChunk(nearbyPos.x, nearbyPos.z);
+                LOGGER.info("llega llega, tranquilo");
 
-                    if (state.getBlock() == Blocks.BELL) {
+                BlockPos origin = nearbyChunk.getPos().getWorldPosition();
 
-                        LOGGER.info("Found bell at {}, replacing...", pos);
-                        BlockState newState = ModBlocks.VILLAGE_BELL.get().defaultBlockState();
+                for (int x = origin.getX(); x < origin.getX() + 16; x++) {
+                    for (int z = origin.getZ(); z < origin.getZ() + 16; z++) {
+                        for (int y = level.getMinY(); y < level.getMaxY(); y++) {
+                            BlockPos pos = new BlockPos(x, y, z);
+                            BlockState state = level.getBlockState(pos);
 
-                        if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
-                            newState = newState.setValue(BlockStateProperties.HORIZONTAL_FACING,
-                                    state.getValue(BlockStateProperties.HORIZONTAL_FACING));
+                            if (state.getBlock() == Blocks.BELL) {
+                                LOGGER.info("Reemplazando campana vanilla en {}", pos);
+                                BlockState newState = ModBlocks.VILLAGE_BELL.get().defaultBlockState();
+
+                                if (state.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+                                    newState = newState.setValue(BlockStateProperties.HORIZONTAL_FACING,
+                                            state.getValue(BlockStateProperties.HORIZONTAL_FACING));
+                                }
+                                if (state.hasProperty(BlockStateProperties.BELL_ATTACHMENT)) {
+                                    newState = newState.setValue(BlockStateProperties.BELL_ATTACHMENT,
+                                            state.getValue(BlockStateProperties.BELL_ATTACHMENT));
+                                }
+                                if (state.hasProperty(BlockStateProperties.POWERED)) {
+                                    newState = newState.setValue(BlockStateProperties.POWERED,
+                                            state.getValue(BlockStateProperties.POWERED));
+                                }
+
+                                level.setBlock(pos, newState, 3);
+                                foundBell = true;
+                            }
                         }
-                        if (state.hasProperty(BlockStateProperties.BELL_ATTACHMENT)) {
-                            newState = newState.setValue(BlockStateProperties.BELL_ATTACHMENT,
-                                    state.getValue(BlockStateProperties.BELL_ATTACHMENT));
-                        }
-                        if (state.hasProperty(BlockStateProperties.POWERED)) {
-                            newState = newState.setValue(BlockStateProperties.POWERED,
-                                    state.getValue(BlockStateProperties.POWERED));
-                        }
-
-                        level.setBlock(pos, newState, 3);
-                        LOGGER.info("Replaced bell at {}", pos);
-                        foundBell = true;
                     }
                 }
             }
         }
 
-        if(foundBell) {
-            data.markReplaced();
-            LOGGER.info("Marked chunk {} as processed", chunk.getPos());
+        // Si se reemplazó alguna campana, marcamos los 9 chunks como procesados
+        if (foundBell) {
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    ChunkPos nearbyPos = new ChunkPos(chunk.getPos().x + dx, chunk.getPos().z + dz);
+                    LevelChunk markChunk = serverLevel.getChunkSource().getChunkNow(nearbyPos.x, nearbyPos.z);
+                    if (markChunk == null) continue;
+
+                    data = markChunk.getData(ModAttachments.VILLAGE_BELL_CHUNK);
+                    if (!data.isReplaced()) {
+                        data.markReplaced();
+                        LOGGER.info("Marcado chunk {} como procesado", markChunk.getPos());
+                    }
+                }
+            }
         }
     }
 }

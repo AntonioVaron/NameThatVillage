@@ -23,9 +23,7 @@ public class VillageBellScreen extends AbstractContainerScreen<VillageBellMenu>
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float pPartialTick, int pMouseX, int pMouseY)
     {
-        //RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        //RenderSystem.setShaderTexture(0, GUI_TEXTURE);
 
         int x = (width - 276) / 2;
         int y = (height - imageHeight) / 2;

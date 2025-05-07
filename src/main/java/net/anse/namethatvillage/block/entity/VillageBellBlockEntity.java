@@ -1,7 +1,10 @@
 package net.anse.namethatvillage.block.entity;
 
+import net.anse.namethatvillage.NameThatVillage;
+import net.anse.namethatvillage.VillageBellManager;
 import net.anse.namethatvillage.VillageNameGenerator;
 import net.anse.namethatvillage.init.ModBlockEntities;
+import net.anse.namethatvillage.init.ModBlocks;
 import net.anse.namethatvillage.screen.custom.VillageBellMenu;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
@@ -25,10 +28,15 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.apache.logging.log4j.LogManager;
@@ -40,10 +48,25 @@ import java.util.*;
 public class VillageBellBlockEntity extends BlockEntity implements MenuProvider {
     private String villageName = "Default";
     private final List<UUID> villagerIds = new ArrayList<>();
+    private final List<ChunkPos> villageChunks = new ArrayList<>();
+    private boolean isPrimary = true;
     private int searchCooldown = 0;
     private boolean shaking;
     private int shakeTime;
     private int shakeDirection;
+    private static final Set<Block> VILLAGE_BLOCKS = Set.of(
+            Blocks.BELL,
+            Blocks.WHITE_BED, Blocks.ORANGE_BED, Blocks.MAGENTA_BED, Blocks.LIGHT_BLUE_BED,
+            Blocks.YELLOW_BED, Blocks.LIME_BED, Blocks.PINK_BED, Blocks.GRAY_BED,
+            Blocks.LIGHT_GRAY_BED, Blocks.CYAN_BED, Blocks.PURPLE_BED, Blocks.BLUE_BED,
+            Blocks.BROWN_BED, Blocks.GREEN_BED, Blocks.RED_BED, Blocks.BLACK_BED,
+            Blocks.COMPOSTER, Blocks.SMITHING_TABLE, Blocks.CARTOGRAPHY_TABLE,
+            Blocks.FLETCHING_TABLE, Blocks.LECTERN, Blocks.STONE_BRICKS,
+            Blocks.OAK_FENCE, Blocks.SPRUCE_FENCE, Blocks.OAK_PLANKS, Blocks.BAMBOO_PLANKS,
+            Blocks.ACACIA_PLANKS, Blocks.BIRCH_PLANKS, Blocks.CHERRY_PLANKS, Blocks.CRIMSON_PLANKS,
+            Blocks.DARK_OAK_PLANKS, Blocks.JUNGLE_PLANKS, Blocks.MANGROVE_PLANKS, Blocks.SPRUCE_PLANKS,
+            Blocks.WARPED_PLANKS, Blocks.DIRT_PATH, ModBlocks.VILLAGE_BELL.get()
+    );
     private static final Logger LOGGER = LogManager.getLogger();
 
     public VillageBellBlockEntity(BlockPos pos, BlockState state) {
@@ -170,12 +193,33 @@ public class VillageBellBlockEntity extends BlockEntity implements MenuProvider 
             } catch (IllegalArgumentException ignored) {
             }
         }
+
+        villageChunks.clear();
+        ListTag chunkList = tag.getList("VillageChunks", Tag.TAG_COMPOUND);
+        for (Tag element : chunkList) {
+            if (element instanceof CompoundTag entry) {
+                int x = entry.getInt("x");
+                int z = entry.getInt("z");
+                villageChunks.add(new ChunkPos(x, z));
+            }
+        }
     }
 
     @Override
     public void onLoad() {
         super.onLoad();
 
+        recalcVillageStatus();
+
+    }
+
+    public void recalcVillageStatus() {
+
+        this.villageChunks.clear();
+
+        if (!level.isClientSide) {
+            VillageBellManager.registerBell(this);
+        }
         // Solo si aún no tiene nombre
         if (villageName.equals("Default") && this.level != null && !this.level.isClientSide) {
             Biome biome = this.level.getBiome(this.worldPosition).value();
@@ -192,6 +236,36 @@ public class VillageBellBlockEntity extends BlockEntity implements MenuProvider 
                 this.level.sendBlockUpdated(this.worldPosition, this.getBlockState(), this.getBlockState(), 3);
             }
         }
+        if (this.level != null && !this.level.isClientSide) {
+            if (this.villageChunks.isEmpty()) {
+
+                VillageBellBlockEntity overlapping = VillageBellManager.getAllBells().stream()
+                        .filter(other -> other != this)
+                        .filter(other -> other.getLevel() == this.getLevel())
+                        .filter(other -> other.isPrimary)
+                        .filter(other -> other.getVillageChunks().contains(new ChunkPos(this.getBlockPos())))
+                        .findFirst()
+                        .orElse(null);
+
+                if (overlapping != null) {
+                    this.villageName = overlapping.getVillageName();
+                    this.isPrimary = false;
+                    LOGGER.info("Campana en {} se marca como SUPLETORIA por estar dentro de aldea '{}'", this.getBlockPos(), this.villageName);
+                } else {
+                    // No pertenece a ninguna aldea → se convierte en principal
+                    LOGGER.info("Campana en {} se marca como PRINCIPAL y calcula su aldea", this.getBlockPos());
+                    this.calcVillageChunks();
+                    this.isPrimary = true;
+                }
+
+            }
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        super.setRemoved();
+        VillageBellManager.unregisterBell(this);
     }
 
     @Override
@@ -217,9 +291,110 @@ public class VillageBellBlockEntity extends BlockEntity implements MenuProvider 
             villagerList.add(StringTag.valueOf(id.toString()));
         }
         tag.put("Villagers", villagerList);
+
+        // Chunk list
+        ListTag chunkList = new ListTag();
+        for (ChunkPos pos : villageChunks) {
+            CompoundTag entry = new CompoundTag();
+            entry.putInt("x", pos.x);
+            entry.putInt("z", pos.z);
+            chunkList.add(entry);
+        }
+        tag.put("VillageChunks", chunkList);
+    }
+
+    public void calcVillageChunks()
+    {
+        Set<ChunkPos> checkedChunks = new HashSet<>();
+        Queue<ChunkPos> unexploredChunks = new ArrayDeque<>();
+
+        ChunkPos startChunk = new ChunkPos(this.getBlockPos());
+        unexploredChunks.add(startChunk);
+
+        while (!unexploredChunks.isEmpty()) {
+            ChunkPos current = unexploredChunks.poll();
+
+            // Si ya fue evaluado, salta
+            if (!checkedChunks.add(current)) {
+                continue;
+            }
+
+            // Si ya pertenece a otra aldea, ignorar
+            if (chunkBelongsToOther(current)) {
+                continue;
+            }
+
+            // Si contiene bloques de aldea, lo añadimos y expandimos
+            if (chunkHasVillageBlocks(current)) {
+
+                LOGGER.info("Chunk {} contiene bloques de aldea", current);
+                if (!villageChunks.contains(current)) {
+                    villageChunks.add(current);
+                }
+
+                // Añadir los 8 vecinos como parte de la aldea (sin bloquear expansión)
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dz = -1; dz <= 1; dz++) {
+                        if (dx == 0 && dz == 0) continue;
+
+                        ChunkPos vecino = new ChunkPos(current.x + dx, current.z + dz);
+                        if (!villageChunks.contains(vecino)) {
+                            villageChunks.add(vecino);
+                            unexploredChunks.add(vecino); // ⚠️ Esto es clave para que puedan expandirse
+                            LOGGER.info("Se añadió chunk vecino {} como parte de la aldea desde {}", vecino, current);
+                        }
+                    }
+                }
+            }
+        }
+        LOGGER.info("Aldea '{}' tiene {} chunks: {}", villageName, villageChunks.size(), villageChunks);
+    }
+
+    private boolean chunkBelongsToOther(ChunkPos chunkPos) {
+        for (VillageBellBlockEntity other : VillageBellManager.getAllBells()) {
+            if (other == this) continue;
+            if (other.villageChunks.contains(chunkPos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+
+    private boolean chunkHasVillageBlocks(ChunkPos chunkPos) {
+        if (this.level == null) return false;
+
+        LevelChunk chunk = this.level.getChunk(chunkPos.x, chunkPos.z);
+        BlockPos chunkOrigin = chunkPos.getWorldPosition();
+
+        for (int x = 0; x < 16; x++) {
+            for (int z = 0; z < 16; z++) {
+                int surfaceY = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+
+                int verticalRadius = 2 * 16;
+
+                int minY = Math.max(this.level.getMinY(), surfaceY - verticalRadius);
+                int maxY = Math.min(this.level.getMaxY(), surfaceY + verticalRadius);
+
+                for (int y = minY; y < maxY; y++) {
+                    BlockPos pos = chunkOrigin.offset(x, y, z);
+                    BlockState state = level.getBlockState(pos);
+
+                    if (VILLAGE_BLOCKS.contains(state.getBlock())) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     // Getters y setters
+    public List<ChunkPos> getVillageChunks() {
+        return this.villageChunks;
+    }
+
     public String getVillageName() {
         return villageName;
     }
@@ -232,6 +407,15 @@ public class VillageBellBlockEntity extends BlockEntity implements MenuProvider 
     public List<UUID> getVillagerIds() {
         return villagerIds;
     }
+
+    public boolean isPrimary() {
+        return isPrimary;
+    }
+
+    public void setPrimary(boolean primary) {
+        this.isPrimary = primary;
+    }
+
     public int getShakeTime() {
         return this.shakeTime;
     }

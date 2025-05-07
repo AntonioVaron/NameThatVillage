@@ -8,6 +8,7 @@ import net.anse.namethatvillage.event.WorldEvents;
 import net.anse.namethatvillage.init.ModBlockEntities;
 import net.anse.namethatvillage.init.ModBlocks;
 import net.anse.namethatvillage.init.ModItems;
+import net.anse.namethatvillage.network.NetworkHandler;
 import net.anse.namethatvillage.screen.ModMenuTypes;
 import net.anse.namethatvillage.screen.custom.VillageBellMenu;
 import net.anse.namethatvillage.screen.custom.VillageBellScreen;
@@ -49,8 +50,6 @@ public class NameThatVillage {
     public static final String MOD_ID = "namethatvillage";
     private static final Logger LOGGER = LogManager.getLogger();
 
-
-
     public NameThatVillage(IEventBus modEventBus) {
         LOGGER.info("Name That Village mod initialized!");
 
@@ -66,6 +65,8 @@ public class NameThatVillage {
         ModBlockEntities.register(modEventBus);
 
         ModMenuTypes.register(modEventBus);
+
+        modEventBus.addListener(NetworkHandler::register);
 
         NeoForge.EVENT_BUS.register((WorldEvents.class));
 
